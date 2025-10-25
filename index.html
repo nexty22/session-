@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Nexty Session ID Generator</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      background: #0a0a0a;
+      color: #fff;
+      text-align: center;
+      margin: 0;
+      padding: 2rem;
+    }
+    button {
+      background: #00b894;
+      border: none;
+      padding: 10px 20px;
+      color: white;
+      font-size: 18px;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+    img {
+      margin-top: 20px;
+      border: 2px solid #00b894;
+      border-radius: 8px;
+    }
+    textarea {
+      width: 90%;
+      height: 100px;
+      margin-top: 15px;
+      border-radius: 6px;
+      font-size: 14px;
+      padding: 10px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Nexty Session ID Generator</h1>
+  <button id="startBtn">Start Session</button>
+  <div id="qrBox"></div>
+  <textarea id="sessionText" placeholder="Your Session ID will appear here"></textarea>
+
+  <script>
+    const startBtn = document.getElementById("startBtn");
+    const qrBox = document.getElementById("qrBox");
+    const sessionText = document.getElementById("sessionText");
+
+    startBtn.onclick = async () => {
+      qrBox.innerHTML = "Generating QR...";
+      const startRes = await fetch("/start", { method: "POST" });
+      const { clientId } = await startRes.json();
+
+      const qrInt = setInterval(async () => {
+        const qrRes = await fetch(`/qr?clientId=${clientId}`);
+        const { qr } = await qrRes.json();
+        if (qr) {
+          qrBox.innerHTML = `<img src="${qr}" width="250"/>`;
+        }
+        const sessionRes = await fetch(`/session?clientId=${clientId}`);
+        const { session } = await sessionRes.json();
+        if (session) {
+          sessionText.value = session;
+          clearInterval(qrInt);
+        }
+      }, 3000);
+    };
+  </script>
+</body>
+</html>
