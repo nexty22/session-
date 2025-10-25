@@ -11,11 +11,15 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
 app.use(cors());
 app.use(bodyParser.json());
-
 const PORT = process.env.PORT || 3000;
 const sockets = {};
 
-app.use(express.static(path.join(__dirname, "frontend")));
+// Serve static files (index.html, etc.) directly from root
+app.use(express.static(__dirname));
+
+app.get("/", (req, res) => {
+  res.sendFile(path.join(__dirname, "index.html"));
+});
 
 app.post("/start", async (req, res) => {
   const clientId = req.body.clientId || Date.now().toString();
@@ -47,4 +51,4 @@ app.get("/session", (req, res) => {
   res.json({ session: c?.sessionID || null });
 });
 
-app.listen(PORT, () => console.log(`🚀 Nexty Session Generator running on port ${PORT}`));
+app.listen(PORT, () => console.log(`✅ Nexty Session Generator Live on ${PORT}`));
