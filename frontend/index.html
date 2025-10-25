@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Nexty Session Generator</title>
+    <style>
+      body { font-family: Arial; max-width: 700px; margin: 20px auto; text-align: center; }
+      button { padding: 10px 20px; border-radius: 8px; background: #111; color: #fff; border: none; cursor: pointer; }
+      img { margin-top: 15px; width: 250px; }
+      pre { background: #f2f2f2; padding: 10px; border-radius: 8px; text-align: left; word-break: break-all; }
+    </style>
+  </head>
+  <body>
+    <h2>Nexty WhatsApp Session ID Generator</h2>
+    <p>Click start, scan QR in WhatsApp → Linked Devices</p>
+    <button id="startBtn">Start</button>
+    <div id="qr"></div>
+    <div id="status" style="margin:10px;color:green;"></div>
+    <pre id="output" style="display:none;"></pre>
+
+    <script>
+      const api = ''
+      let clientId = ''
+      async function start() {
+        clientId = Date.now().toString(36)
+        document.getElementById('status').innerText = 'Starting session...'
+        await fetch(api + '/start', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ clientId })
+        })
+        document.getElementById('status').innerText = 'Scan QR in your WhatsApp now...'
+        poll()
+      }
+      async function poll() {
+        const qrDiv = document.getElementById('qr')
+        const output = document.getElementById('output')
+        const status = document.getElementById('status')
+
+        const qrInt = setInterval(async () => {
+          const q = await fetch(api + '/qr?clientId=' + clientId).then(r => r.json())
+          if (q.qr) qrDiv.innerHTML = `<img src="${q.qr}" />`
+        }, 1500)
+
+        const sessInt = setInterval(async () => {
+          const s = await fetch(api + '/session?clientId=' + clientId).then(r => r.json())
+          if (s.session) {
+            clearInterval(qrInt)
+            clearInterval(sessInt)
+            status.innerText = '✅ Connected. Session Generated.'
+            output.style.display = 'block'
+            output.textContent = s.session
+          }
+        }, 2000)
+      }
+      document.getElementById('startBtn').onclick = start
+    </script>
+  </body>
+</html>
