@@ -1,0 +1,7 @@
+{
+  "name": "nexty-session-generator",
+  "description": "Generates WhatsApp Session IDs prefixed with Nexty~",
+  "repository": "https://github.com/nexty22/session-",
+  "keywords": ["whatsapp", "session", "nexty", "baileys"],
+  "buildpacks": [{ "url": "heroku/nodejs" }]
+}
