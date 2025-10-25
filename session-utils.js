@@ -1,37 +1,25 @@
 import fs from "fs";
 import path from "path";
-import JSZip from "jszip";
+import archiver from "archiver";
 
-export function listFilesRecursive(dir) {
-  let files = [];
-  try {
-    fs.readdirSync(dir).forEach((f) => {
-      const full = path.join(dir, f);
-      const stat = fs.statSync(full);
-      if (stat.isDirectory()) {
-        files = files.concat(listFilesRecursive(full));
-      } else {
-        files.push(full);
-      }
+export const zipSessionToBase64 = async (dirPath) => {
+  const zipPath = path.join("./", "session.zip");
+  const output = fs.createWriteStream(zipPath);
+  const archive = archiver("zip", { zlib: { level: 9 } });
+
+  return new Promise((resolve, reject) => {
+    output.on("close", () => {
+      const data = fs.readFileSync(zipPath);
+      fs.unlinkSync(zipPath);
+      resolve(data.toString("base64"));
     });
-  } catch {
-    // directory may not exist yet
-  }
-  return files;
-}
+    archive.on("error", reject);
+    archive.pipe(output);
+    archive.directory(dirPath, false);
+    archive.finalize();
+  });
+};
 
-export async function zipSessionToBase64(folderPath) {
-  const zip = new JSZip();
-  const files = listFilesRecursive(folderPath);
-  for (const f of files) {
-    const rel = f.replace(folderPath + "/", "");
-    const data = fs.readFileSync(f);
-    zip.file(rel, data);
-  }
-  const content = await zip.generateAsync({ type: "nodebuffer" });
-  return content.toString("base64");
-}
-
-export function makeNextySession(base64) {
+export const makeNextySession = (base64) => {
   return `Nexty~${base64}`;
-}
+};
