@@ -1,99 +1,132 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Nexty Session Generator</title>
-<style>
-  body {
-    background: #000;
-    color: #0ff;
-    font-family: monospace;
-    text-align: center;
-    padding-top: 80px;
-  }
-  h1 { color: #00ffe6; }
-  input {
-    background: #111;
-    border: 1px solid #00ffe6;
-    border-radius: 8px;
-    color: #0ff;
-    padding: 10px;
-    width: 220px;
-    text-align: center;
-    margin-bottom: 10px;
-  }
-  button {
-    background: #00ffe6;
-    color: #000;
-    padding: 10px 25px;
-    border: none;
-    border-radius: 10px;
-    cursor: pointer;
-    font-weight: bold;
-  }
-  #pairCodeBox, #sessionBox {
-    margin-top: 30px;
-    padding: 15px;
-    background: #111;
-    border-radius: 12px;
-    display: inline-block;
-    min-width: 250px;
-  }
-  #pairCode {
-    font-size: 26px;
-    letter-spacing: 5px;
-    color: #0ff;
-  }
-</style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Nexty Session ID Generator</title>
+  <style>
+    body {
+      background: #000;
+      color: #00fff7;
+      font-family: "Courier New", monospace;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      text-align: center;
+      margin: 0;
+    }
+
+    h1 {
+      font-size: 2rem;
+      color: #00fff7;
+      text-shadow: 0 0 20px #00fff7;
+      animation: glow 2s ease-in-out infinite alternate;
+    }
+
+    @keyframes glow {
+      from { text-shadow: 0 0 10px #00fff7; }
+      to { text-shadow: 0 0 25px #00fff7, 0 0 40px #00fff7; }
+    }
+
+    input {
+      margin-top: 15px;
+      padding: 12px;
+      width: 260px;
+      border: none;
+      outline: none;
+      border-radius: 10px;
+      text-align: center;
+      font-size: 1rem;
+      color: #00fff7;
+      background: #111;
+      box-shadow: 0 0 15px #00fff7;
+    }
+
+    button {
+      margin-top: 20px;
+      padding: 12px 25px;
+      font-size: 1.1rem;
+      background: #00fff7;
+      color: #000;
+      border: none;
+      border-radius: 15px;
+      cursor: pointer;
+      box-shadow: 0 0 20px #00fff7;
+      transition: 0.3s;
+    }
+
+    button:hover {
+      background: #00b3a9;
+      box-shadow: 0 0 30px #00fff7;
+    }
+
+    .pair-box {
+      margin-top: 30px;
+      background: #0a0a0a;
+      padding: 25px;
+      border-radius: 20px;
+      width: 320px;
+      box-shadow: 0 0 25px #00fff7;
+      animation: fadeIn 1s ease-in-out;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: scale(0.9); }
+      to { opacity: 1; transform: scale(1); }
+    }
+
+    .pair-code {
+      margin-top: 15px;
+      font-size: 1.8rem;
+      letter-spacing: 5px;
+      font-weight: bold;
+    }
+
+  </style>
 </head>
 <body>
   <h1>Nexty Session ID Generator</h1>
 
-  <input id="number" placeholder="Enter phone (923001234567)" />
-  <br>
-  <button onclick="start()">Generate Pair Code</button>
+  <input id="numberInput" type="text" placeholder="Enter your number..." />
 
-  <div id="pairCodeBox"></div>
-  <div id="sessionBox"></div>
+  <button id="generateBtn">Generate Pair Code</button>
+
+  <div class="pair-box" id="pairBox" style="display:none;">
+    <p>🔗 Pair this code in WhatsApp:</p>
+    <div class="pair-code" id="pairCode"></div>
+  </div>
 
   <script>
-    async function start() {
-      const num = document.getElementById("number").value.trim();
-      if (!num) {
-        alert("Please enter your phone number (e.g. 923001234567)");
+    const btn = document.getElementById("generateBtn");
+    const pairBox = document.getElementById("pairBox");
+    const pairCode = document.getElementById("pairCode");
+    const numberInput = document.getElementById("numberInput");
+
+    btn.addEventListener("click", async () => {
+      const number = numberInput.value.trim();
+      if (!number) {
+        alert("Please enter your number first!");
         return;
       }
 
-      document.getElementById("pairCodeBox").innerHTML = "Generating Pair Code...";
-      const res = await fetch("/start", {
+      btn.disabled = true;
+      btn.innerText = "Generating...";
+
+      const res = await fetch("/generate-session", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ number: num })
+        body: JSON.stringify({ number })
       });
+
       const data = await res.json();
-      checkPairCode(data.clientId);
-    }
+      pairBox.style.display = "block";
+      pairCode.innerText = data.sessionID;
 
-    async function checkPairCode(id) {
-      let timer = setInterval(async () => {
-        let res = await fetch(`/pair?clientId=${id}`);
-        let pair = await res.json();
-        if (pair.code) {
-          document.getElementById("pairCodeBox").innerHTML =
-            `<b>🔗 Pair this code in WhatsApp:</b><br><div id='pairCode'>${pair.code}</div>`;
-        }
-
-        let sres = await fetch(`/session?clientId=${id}`);
-        let sess = await sres.json();
-        if (sess.session) {
-          clearInterval(timer);
-          document.getElementById("pairCodeBox").innerHTML = "";
-          document.getElementById("sessionBox").innerHTML =
-            `<b>✅ Your Session ID:</b><br><code>${sess.session}</code>`;
-        }
-      }, 2500);
-    }
+      btn.disabled = false;
+      btn.innerText = "Generate Pair Code";
+    });
   </script>
 </body>
 </html>
