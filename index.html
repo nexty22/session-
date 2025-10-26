@@ -13,6 +13,16 @@
     padding-top: 80px;
   }
   h1 { color: #00ffe6; }
+  input {
+    background: #111;
+    border: 1px solid #00ffe6;
+    border-radius: 8px;
+    color: #0ff;
+    padding: 10px;
+    width: 220px;
+    text-align: center;
+    margin-bottom: 10px;
+  }
   button {
     background: #00ffe6;
     color: #000;
@@ -39,17 +49,27 @@
 </head>
 <body>
   <h1>Nexty Session ID Generator</h1>
+
+  <input id="number" placeholder="Enter phone (923001234567)" />
+  <br>
   <button onclick="start()">Generate Pair Code</button>
+
   <div id="pairCodeBox"></div>
   <div id="sessionBox"></div>
 
   <script>
     async function start() {
+      const num = document.getElementById("number").value.trim();
+      if (!num) {
+        alert("Please enter your phone number (e.g. 923001234567)");
+        return;
+      }
+
       document.getElementById("pairCodeBox").innerHTML = "Generating Pair Code...";
       const res = await fetch("/start", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({})
+        body: JSON.stringify({ number: num })
       });
       const data = await res.json();
       checkPairCode(data.clientId);
