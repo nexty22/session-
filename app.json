@@ -1,7 +1,6 @@
 {
-  "name": "nexty-session-generator",
-  "description": "Generates WhatsApp Session IDs prefixed with Nexty~",
+  "name": "Nexty Pair Code Session Generator",
+  "description": "Generate WhatsApp session ID using pairing code (no QR).",
   "repository": "https://github.com/nexty22/session-",
-  "keywords": ["whatsapp", "session", "nexty", "baileys"],
   "buildpacks": [{ "url": "heroku/nodejs" }]
 }
