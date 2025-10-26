@@ -1,104 +1,87 @@
 // ===============================
-// ✅ NEXTY SESSION GENERATOR
+// ✅ NEXTY SESSION ID GENERATOR
+// Pair Code Style (No QR)
 // ===============================
 import express from "express";
 import cors from "cors";
 import bodyParser from "body-parser";
-import qrcode from "qrcode";
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
-import { makeWASocket, useMultiFileAuthState } from "@whiskeysockets/baileys";
+import pino from "pino";
+import { makeWASocket, useMultiFileAuthState, fetchLatestBaileysVersion } from "@whiskeysockets/baileys";
 import { zipSessionToBase64, makeNextySession } from "./session-utils.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
-const PORT = process.env.PORT || 3000;
-
 app.use(cors());
 app.use(bodyParser.json());
+const PORT = process.env.PORT || 3000;
 
-// ✅ Ensure sessions folder exists
 if (!fs.existsSync("./sessions")) fs.mkdirSync("./sessions");
 
-// ✅ Keep all active sockets
 const sockets = {};
 
-// ✅ Serve static files (index.html)
+// Serve frontend
 app.use(express.static(__dirname));
 
-app.get("/", (req, res) => {
-  res.sendFile(path.join(__dirname, "index.html"));
-});
+app.get("/", (req, res) => res.sendFile(path.join(__dirname, "index.html")));
 
 // ===============================
-// 🚀 Generate QR + Session
+// 🚀 Generate Pair Code
 // ===============================
 app.post("/start", async (req, res) => {
   try {
     const clientId = req.body.clientId || Date.now().toString();
     const { state, saveCreds } = await useMultiFileAuthState(`./sessions/${clientId}`);
+    const { version } = await fetchLatestBaileysVersion();
 
     const sock = makeWASocket({
-      auth: state,
+      version,
       printQRInTerminal: false,
+      auth: state,
+      browser: ["NextyGen", "Chrome", "10.0"],
+      logger: pino({ level: "silent" })
     });
 
     sockets[clientId] = { sock, saveCreds };
 
+    // Pair code generation
+    const code = await sock.requestPairingCode("923001234567"); // 👈 Replace with your phone number (E.164 format)
+    sockets[clientId].pairCode = code;
+    console.log("✅ Pair Code generated:", code);
+
+    // Listen for successful connection
     sock.ev.on("connection.update", async (update) => {
-      const { qr, connection, lastDisconnect } = update;
-
-      if (qr) {
-        console.log("✅ QR generated for client:", clientId);
-        sockets[clientId].qr = await qrcode.toDataURL(qr);
-      }
-
+      const { connection } = update;
       if (connection === "open") {
-        console.log("🟢 Connected successfully:", clientId);
+        console.log("🟢 WhatsApp connected!");
         const base64 = await zipSessionToBase64(`./sessions/${clientId}`);
         sockets[clientId].sessionID = makeNextySession(base64);
-      }
-
-      if (connection === "close") {
-        console.log("🔴 Connection closed:", lastDisconnect?.error?.message);
       }
     });
 
     res.json({ ok: true, clientId });
   } catch (err) {
-    console.error("❌ Error creating session:", err);
-    res.status(500).json({ error: "Failed to start session" });
+    console.error("❌ Error:", err);
+    res.status(500).json({ error: "Failed to start" });
   }
 });
 
 // ===============================
-// 📤 Get QR (Polling)
+// 📦 Get Pair Code
 // ===============================
-app.get("/qr", (req, res) => {
-  const client = sockets[req.query.clientId];
-  if (client && client.qr) {
-    res.json({ qr: client.qr });
-  } else {
-    res.json({ qr: null });
-  }
+app.get("/pair", (req, res) => {
+  const c = sockets[req.query.clientId];
+  res.json({ code: c?.pairCode || null });
 });
 
 // ===============================
 // 📩 Get Session ID
 // ===============================
 app.get("/session", (req, res) => {
-  const client = sockets[req.query.clientId];
-  if (client && client.sessionID) {
-    res.json({ session: client.sessionID });
-  } else {
-    res.json({ session: null });
-  }
+  const c = sockets[req.query.clientId];
+  res.json({ session: c?.sessionID || null });
 });
 
-// ===============================
-// 🚀 Start Server
-// ===============================
-app.listen(PORT, () => {
-  console.log(`✅ Nexty Session Generator running on port ${PORT}`);
-});
+app.listen(PORT, () => console.log(`✅ Nexty Session Generator live on port ${PORT}`));
